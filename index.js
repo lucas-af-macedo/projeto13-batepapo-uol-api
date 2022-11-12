@@ -29,16 +29,19 @@ setInterval(async ()=>{
     console.log(users)
 },15000)
 
-/*app.get('/participants', async (req, res) =>{
-    console.log('oi')
-    /*db.collection("users").insertOne({
-        email: "joao@email.com",
-        password: "minha_super_senha"
-    });
-    res.sendStatus(200)
+app.get('/participants', async (req, res) =>{
+    try{
+        const users = await db.collection("participants").find({}).toArray()
+        const participants = users.map((user)=>user.name)
+        res.status(200).send(users)
+        return
+    } catch (err){
+        console.log(err)
+        res.sendStatus(500)
+    }
 })
 
-app.get('/messages', async (req, res) =>{
+/*app.get('/messages', async (req, res) =>{
     console.log(req)
 })*/
 
@@ -76,7 +79,8 @@ app.post('/participants', async (req, res) =>{
             time: now.format('HH:mm:ss')
         });
 
-    } catch{
+    } catch(err){
+        console.log(err)
         res.sendStatus(500)
     }
 
