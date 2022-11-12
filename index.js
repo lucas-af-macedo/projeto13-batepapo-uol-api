@@ -32,7 +32,6 @@ setInterval(async ()=>{
 app.get('/participants', async (req, res) =>{
     try{
         const users = await db.collection("participants").find({}).toArray()
-        const participants = users.map((user)=>user.name)
         res.status(200).send(users)
         return
     } catch (err){
@@ -41,9 +40,16 @@ app.get('/participants', async (req, res) =>{
     }
 })
 
-/*app.get('/messages', async (req, res) =>{
-    console.log(req)
-})*/
+app.get('/messages', async (req, res) =>{
+    try{
+        const messages = await db.collection("messages").find({}).toArray()
+        res.status(200).send(messages)
+        return
+    } catch (err){
+        console.log(err)
+        res.sendStatus(500)
+    }
+})
 
 
 app.post('/participants', async (req, res) =>{
