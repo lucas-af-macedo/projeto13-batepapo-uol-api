@@ -26,8 +26,48 @@ const postParticipantSchema = joi.object({
 setInterval(async ()=>{
     const users = await db.collection("participants").find({}).toArray()
 
-    console.log(users)
+    
 },15000)
+
+function listMessagesWithLimit(messages, limit, user){
+    let messagesArray = []
+
+    const limitNumber = Number(limit)
+    for (let i=messages.length-1;i>=0;i--){
+        const isPrivate = messages[i].type === 'private'
+        const isUserConversation = messages[i].from === user || messages[i].to === user
+
+        if(isPrivate){
+            if(!isUserConversation){
+                continue;
+            }
+        }
+
+        messagesArray = [messages[i],...messagesArray]
+        if(messagesArray.length===limitNumber){
+            return(messagesArray)
+        }
+    }
+    return(messagesArray)
+}
+
+function listMessages(messages, user){
+    let messagesArray = []
+
+    for (let i = messages.length-1; i >= 0; i--){
+        const isPrivate = messages[i].type === 'private'
+        const isUserConversation = messages[i].from === user || messages[i].to === user
+
+        if(isPrivate){
+            if(!isUserConversation){
+                continue;
+            }
+        }
+
+        messagesArray = [messages[i],...messagesArray]
+    }
+    return(messagesArray)
+}
 
 app.get('/participants', async (req, res) =>{
     try{
@@ -40,10 +80,20 @@ app.get('/participants', async (req, res) =>{
     }
 })
 
-app.get('/messages', async (req, res) =>{
+app.get('/messages:limit?', async (req, res) =>{
+    const limit = req.query.limit
+    const user = req.headers.user
+    let messagesArray = []
+
     try{
         const messages = await db.collection("messages").find({}).toArray()
-        res.status(200).send(messages)
+        if(limit!==undefined){
+            messagesArray = listMessagesWithLimit(messages, limit, user)
+        }else{
+            messagesArray = listMessages(messages, user)
+        }
+
+        res.status(200).send(messagesArray)
         return
     } catch (err){
         console.log(err)
