@@ -16,6 +16,7 @@ let db;
 
 mongoClient.connect().then(() => {
 	db = mongoClient.db("batepapo-uol"); 
+    
 });
 
 
@@ -40,7 +41,7 @@ function listMessagesWithLimit(messages, limit, user){
 
     const limitNumber = Number(limit)
     for (let i=messages.length-1;i>=0;i--){
-        const isPrivate = messages[i].type === 'private'
+        const isPrivate = messages[i].type === 'private_message'
         const isUserConversation = messages[i].from === user || messages[i].to === user
 
         if(isPrivate){
@@ -185,8 +186,30 @@ app.post('/messages', async (req, res) =>{
     res.sendStatus(201)
 })
 
-/*app.post('/status', async (req, res) =>{
-    console.log(req)
-})*/
+app.post('/status', async (req, res) =>{
+    const user = req.headers.user
+
+    try{
+        const userLogged = await db.collection('participants').findOne({name:user})
+
+        if(!userLogged){
+            res.sendStatus(404)
+            return
+        }
+
+        await db.collection('participants').updateOne({
+            _id: userLogged._id
+        },{
+            $set:{
+                lastStatus: Date.now()
+            }
+        })
+
+    } catch(err){
+        console.log(err)
+        res.sendStatus(500)
+    }
+    res.sendStatus(200)
+})
 
 app.listen(5000);
