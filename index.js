@@ -1,7 +1,7 @@
 import express,{ json } from 'express';
 import cors from 'cors';
 import dotenv from "dotenv";
-import { MongoClient } from "mongodb";
+import { MongoClient, ObjectId } from "mongodb";
 import joi from 'joi'
 import dayjs from 'dayjs'
 
@@ -185,11 +185,11 @@ app.post('/messages', async (req, res) =>{
     }
 
     try{
-        const userLogged = await db.collection('participants').find({
+        const userLogged = await db.collection('participants').findOne({
             name: user
-        }).toArray()
+        })
 
-        if(userLogged.length){
+        if(userLogged){
             await db.collection('messages').insertOne({
                 from: user,
                 time: now.format('HH:mm:ss'),
@@ -233,6 +233,33 @@ app.post('/status', async (req, res) =>{
         res.sendStatus(500)
     }
     res.sendStatus(200)
+})
+
+app.delete('/messages/:id', async (req, res) =>{
+    const id = req.params.id
+    const user = req.headers.user
+
+    try{
+        const message = await db.collection('messages').findOne({_id: ObjectId(id)})
+
+        if (message){
+            if(user===message.from){
+                await db.collection('messages').deleteOne({_id: ObjectId(id)})
+            }else{
+                res.sendStatus(401)
+            }
+        }else{
+            res.sendStatus(404)
+        }
+        
+    } catch (err){
+        console.log(err)
+        res.sendStatus(500)
+    }
+})
+
+app.put('/status', async (req, res) =>{
+    console.log(req)
 })
 
 app.listen(5000);
