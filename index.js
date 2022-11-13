@@ -251,15 +251,48 @@ app.delete('/messages/:id', async (req, res) =>{
         }else{
             res.sendStatus(404)
         }
-        
+
     } catch (err){
         console.log(err)
         res.sendStatus(500)
     }
 })
 
-app.put('/status', async (req, res) =>{
-    console.log(req)
+app.put('/messages/:id', async (req, res) =>{
+    const validation = postMessageSchema.validate(req.body,{abortEarly: false})
+    const user = req.headers.user
+    const now = dayjs()
+    const {id} = req.params
+
+    if(validation.error){
+        const errors = validation.error.details.map((detail)=>detail.message)
+        res.status(422).send(errors)
+        return;
+    }
+
+    try{
+        const message = await db.collection('messages').findOne({_id: ObjectId(id)})
+
+        if (message){
+            if(user===message.from){
+                await db.collection('messages').updateOne({
+                    _id: message._id
+                },{
+                    $set: req.body
+                })
+            }else{
+                res.sendStatus(401)
+            }
+        }else{
+            res.sendStatus(404)
+        }
+
+    } catch (err){
+        console.log(err)
+        res.sendStatus(500)
+    }
+
+    res.sendStatus(201)
 })
 
 app.listen(5000);
