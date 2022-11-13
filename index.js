@@ -23,6 +23,12 @@ const postParticipantSchema = joi.object({
     name: joi.string().required()
 })
 
+const postMessageSchema = joi.object({
+    to: joi.string().required(),
+    text: joi.string().required(),
+    type: joi.string().required().valid('message','private_message')
+})
+
 setInterval(async ()=>{
     const users = await db.collection("participants").find({}).toArray()
 
@@ -55,7 +61,7 @@ function listMessages(messages, user){
     let messagesArray = []
 
     for (let i = messages.length-1; i >= 0; i--){
-        const isPrivate = messages[i].type === 'private'
+        const isPrivate = messages[i].type === 'private_message'
         const isUserConversation = messages[i].from === user || messages[i].to === user
 
         if(isPrivate){
@@ -143,11 +149,43 @@ app.post('/participants', async (req, res) =>{
     res.sendStatus(201)
 })
 
-/*app.post('/messages', async (req, res) =>{
-    console.log(req)
+app.post('/messages', async (req, res) =>{
+    const validation = postMessageSchema.validate(req.body,{abortEarly: false})
+    const user = req.headers.user
+    const now = dayjs()
+
+    if(validation.error){
+        const errors = validation.error.details.map((detail)=>detail.message)
+        res.status(422).send(errors)
+        return;
+    }
+
+    try{
+        const userLogged = await db.collection('participants').find({
+            name: user
+        }).toArray()
+
+        if(userLogged.length){
+            await db.collection('messages').insertOne({
+                from: user,
+                time: now.format('HH:mm:ss'),
+                ...req.body
+            })
+
+        }else{
+            res.status(422).send('usuario nao logado')
+            return;
+        }
+
+    } catch (err){
+        console.log(err)
+        res.sendStatus(500)
+    }
+
+    res.sendStatus(201)
 })
 
-app.post('/status', async (req, res) =>{
+/*app.post('/status', async (req, res) =>{
     console.log(req)
 })*/
 
