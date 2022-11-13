@@ -4,6 +4,7 @@ import dotenv from "dotenv";
 import { MongoClient, ObjectId } from "mongodb";
 import joi from 'joi'
 import dayjs from 'dayjs'
+import { stripHtml } from "string-strip-html"
 
 dotenv.config();
 
@@ -135,6 +136,7 @@ app.get('/messages:limit?', async (req, res) =>{
 app.post('/participants', async (req, res) =>{
     const validation = postParticipantSchema.validate(req.body,{abortEarly: false})
     const now = dayjs()
+    let objectParticipant = req.body
 
     if(validation.error){
         const errors = validation.error.details.map((detail)=>detail.message)
@@ -142,9 +144,11 @@ app.post('/participants', async (req, res) =>{
         return;
     }
 
+    objectParticipant.name = stripHtml(req.body.name).result.trim()
+
     try{
         const isLogged = await db.collection("participants").find({
-            name:req.body.name
+            name:objectParticipant.name
         }).toArray()
 
         if (isLogged.length){
@@ -153,12 +157,12 @@ app.post('/participants', async (req, res) =>{
         }
 
         await db.collection("participants").insertOne({
-            name: req.body.name,
+            name: objectParticipant.name,
             lastStatus: Date.now()
         });
 
         await db.collection("messages").insertOne({
-            from: req.body.name,
+            from: objectParticipant.name,
             to: 'todos',
             text: 'entou na sala...',
             type: 'status',
@@ -178,11 +182,16 @@ app.post('/messages', async (req, res) =>{
     const user = req.headers.user
     const now = dayjs()
 
+    let objectMenssage = req.body
+
     if(validation.error){
         const errors = validation.error.details.map((detail)=>detail.message)
         res.status(422).send(errors)
         return;
     }
+
+     Object.keys(req.body).forEach((key)=>(
+        objectMenssage[key] = stripHtml(req.body[key]).result.trim()))
 
     try{
         const userLogged = await db.collection('participants').findOne({
@@ -193,7 +202,7 @@ app.post('/messages', async (req, res) =>{
             await db.collection('messages').insertOne({
                 from: user,
                 time: now.format('HH:mm:ss'),
-                ...req.body
+                ...objectMenssage
             })
 
         }else{
@@ -261,14 +270,17 @@ app.delete('/messages/:id', async (req, res) =>{
 app.put('/messages/:id', async (req, res) =>{
     const validation = postMessageSchema.validate(req.body,{abortEarly: false})
     const user = req.headers.user
-    const now = dayjs()
     const {id} = req.params
+    let objectMenssage = req.body
 
     if(validation.error){
         const errors = validation.error.details.map((detail)=>detail.message)
         res.status(422).send(errors)
         return;
     }
+
+    Object.keys(req.body).forEach((key)=>(
+        objectMenssage[key] = stripHtml(req.body[key]).result.trim()))
 
     try{
         const message = await db.collection('messages').findOne({_id: ObjectId(id)})
@@ -278,7 +290,7 @@ app.put('/messages/:id', async (req, res) =>{
                 await db.collection('messages').updateOne({
                     _id: message._id
                 },{
-                    $set: req.body
+                    $set: objectMenssage
                 })
             }else{
                 res.sendStatus(401)
