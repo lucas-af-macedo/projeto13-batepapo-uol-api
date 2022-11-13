@@ -16,7 +16,7 @@ let db;
 
 mongoClient.connect().then(() => {
 	db = mongoClient.db("batepapo-uol"); 
-    
+
 });
 
 
@@ -31,7 +31,30 @@ const postMessageSchema = joi.object({
 })
 
 setInterval(async ()=>{
-    const users = await db.collection("participants").find({}).toArray()
+    const now = dayjs()
+    const date = Date.now()
+    const timeInative = 10000
+
+    try{
+        const users = await db.collection("participants").find({}).toArray()
+
+        for (let i = 0;i < users.length;i++){
+            const timeDiference = date - users[i].lastStatus
+
+            if(timeInative<timeDiference){
+                await db.collection('participants').deleteOne({_id: users[i]._id})
+                await db.collection("messages").insertOne({
+                    from: users[i].name,
+                    to: 'todos',
+                    text: 'sai da sala...',
+                    type: 'status',
+                    time: now.format('HH:mm:ss')
+                });
+            }
+        }
+    } catch (err){
+        console.log(err)
+    }
 
     
 },15000)
